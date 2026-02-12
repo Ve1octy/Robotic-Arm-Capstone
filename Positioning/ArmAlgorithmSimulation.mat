@@ -1,0 +1,157 @@
+function ArmAlgorithm2()
+
+    M = 8.255;
+    N = 19.685;
+    O = 19.05;
+    P = 22.86;
+    
+    % Angle Ranges
+    angle_range_a = 70:1:119;
+    angle_range_b = 0:1:269;
+    
+    results = [];
+    
+    % Iterate over angles
+    for a = angle_range_a
+        for b = angle_range_b
+            [angle_a, real_angle_a, angle_b, real_angle_b, angle_c, real_angle_c, result, distance, ...
+                x1, y1, x2, y2, x3, y3, x4, y4, x5, y5] = calculate_coordinates_and_base_distance(a, b);
+            
+            if result
+                results = [results; angle_a, real_angle_a, angle_b, real_angle_b, angle_c, real_angle_c, ...
+                           result, distance, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5];
+                
+                % Plot the points as a connected line
+               % x_coords = [x1, x2, x3, x4, x5];
+               % y_coords = [y1, y2, y3, y4, y5];
+               % figure;
+               % plot(x_coords, y_coords, '-o'); % Line with markers
+                
+               % Plot the points as a connected line
+                x_coords = [x1, x2, x3, x4, x5];
+                y_coords = [y1, y2, y3, y4, y5];
+                figure;
+                plot(x_coords, y_coords, '-o'); % Line with markers
+                hold on;
+
+                % Define vectors and calculate angles dynamically
+                vectors = [x2 - x1, y2 - y1;   % Vector 1 (x1 to x2)
+                           x3 - x2, y3 - y2;   % Vector 2 (x2 to x3)
+                           x4 - x3, y4 - y3;
+                           x5 - x4, y5 - y4];   % Vector 3 (x3 to x4)];
+
+                angles = [];
+                for i = 1:(size(vectors, 1) - 1)
+                % Vectors to calculate the angle between
+                    u = vectors(i, :);
+                    v = vectors(i + 1, :);
+    
+                    % Compute dot product and magnitudes
+                    dot_product = dot(u, v);
+                    magnitude_u = norm(u);
+                    magnitude_v = norm(v);
+    
+                    % Calculate the angle (in degrees)
+                    angle = acosd(dot_product / (magnitude_u * magnitude_v));
+                    angles = [angles; angle];
+                end
+                
+
+                angles(1) = 180 - angles(1);
+                angles(2) = 180 - angles(2);
+
+                if x3 < x4
+                    angles(3) = 180 + angles(3); % Update the 3rd element in the angles array
+                elseif x3 > x4
+                    angles(3) = 180 - angles(3);
+                end
+
+                % Annotate the plot with calculated angles
+                for i = 1:length(angles)
+                    mid_x = (x_coords(i+1));
+                    mid_y = (y_coords(i+1));
+                    text(mid_x, mid_y, sprintf('%.2f°', angles(i)), 'Color', 'magenta', 'FontSize', 10);
+                end
+
+                % Enhance visualization
+                xlabel('X-axis');
+                ylabel('Y-axis');
+                title('Arm Algorithm with Dynamically Calculated Angles');
+                grid on;
+                hold off;
+                
+                results = [results; angle_a, real_angle_a, angle_b, real_angle_b, angle_c, real_angle_c, ...
+                           result, distance, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5];
+
+            end
+        end
+    end
+    
+    hold off;
+    disp('Plotting completed for valid results');
+    % Save Results to Excel
+    writematrix(results, 'ArmResultsWithVectors.xlsx');
+    disp('Test completed');
+end
+
+function [a, real_a_angle, b, real_b_angle, c, real_c_angle, Result, distance, ...
+          x1, y1, x2, y2, x3, y3, x4, y4, x5, y5] = calculate_coordinates_and_base_distance(a, b)
+    
+    M = 8.255;
+    N = 19.685;
+    O = 19.05;
+    P = 22.86;
+    
+    Result = false;
+    
+    % P Point
+    x1 = 0;
+    y1 = 0;
+    
+    % O Point
+    x2 = 0;
+    y2 = 22.86;
+    
+    % N Point
+    x3 = x2 - 19.05 * sind(a);
+    y3 = y2 - 19.05 * cosd(a);
+    
+    % M Point
+    x4 = x3 - 19.685 * sind(b);
+    y4 = y3 + 19.685 * cosd(b);
+    
+    % S Point
+    x5 = x4;
+    y5 = y4 - 8.255;
+    
+    c = 360 - a - b;
+    
+    % C angle
+    if (-1 < y5 && y5 < 1)
+        Result = true;
+    end
+    
+    % Compute real_a_angle
+    numerator_a = (0 * -19.05 * sind(a)) + (-22.86 * -19.05 * cosd(a));
+    denominator_a = (sqrt(0^2 + 22.86^2) * sqrt((19.05 * sind(a))^2 + 0^2));
+    result_a = numerator_a / denominator_a;
+    clamped_a = max(-1, min(1, result_a)); % Clamp to [-1, 1]
+    real_a_angle = acosd(clamped_a);
+    
+    % Compute real_b_angle
+    numerator_b = (19.05 * cosd(a) * 19.685 * cosd(b)) + (19.05 * sind(a) * -19.685 * sind(b));
+    denominator_b = (sqrt((19.05 * sind(a))^2 + (19.05 * cosd(a))^2) * sqrt((19.685 * cosd(b))^2 + (19.685 * cosd(b))^2));
+    result_b = numerator_b / denominator_b;
+    clamped_b = max(-1, min(1, result_b)); % Clamp to [-1, 1]
+    real_b_angle = acosd(clamped_b);
+    
+    % Compute real_c_angle
+    numerator_c = (0 * 19.685 * sind(b)) + (19.85 * cosd(b) * -8.255);
+    denominator_c = (sqrt(0^2 + 8.255^2) * sqrt((19.685 * sind(b))^2 + (19.685 * cosd(b))^2));
+    result_c = numerator_c / denominator_c;
+    clamped_c = max(-1, min(1, result_c)); % Clamp to [-1, 1]
+    real_c_angle = acosd(clamped_c);
+    
+    % Compute distance
+    distance = abs(x4);
+end
